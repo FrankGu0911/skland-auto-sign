@@ -1,0 +1,40 @@
+version: '3.8'
+
+services:
+  skland-auto-sign:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: skland-auto-sign
+    restart: unless-stopped
+
+    # 挂载配置文件和数据目录
+    volumes:
+      # 配置文件（读写，因为程序可能会更新 cred）
+      - ../config:/app/config
+      # 数据目录（数据库和日志）
+      - ../data:/app/data
+
+    # 环境变量
+    environment:
+      - TZ=Asia/Shanghai
+      - PYTHONUNBUFFERED=1
+
+    # 端口映射
+    ports:
+      - "8080:8080"
+
+    # 日志配置
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    # 健康检查
+    healthcheck:
+      test: ["CMD", "python", "-c", "import requests; requests.get('http://localhost:8080/api/stats/overview')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s

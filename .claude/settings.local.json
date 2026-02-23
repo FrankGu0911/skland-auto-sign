@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cd skland-auto-sign:*)",
+      "Bash(python:*)",
+      "Bash(tail:*)",
+      "Bash(echo 需要安装 fastapi:*)",
+      "Bash(curl:*)",
+      "Bash(sqlite3:*)",
+      "Bash(cd:*)"
+    ]
+  }
+}

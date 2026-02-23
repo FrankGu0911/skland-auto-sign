@@ -1,0 +1,997 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>森空岛自动签到系统</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        :root {
+            /* Light Theme */
+            --bg-primary: #f8fafc;
+            --bg-secondary: #ffffff;
+            --bg-tertiary: #f1f5f9;
+            --text-primary: #0f172a;
+            --text-secondary: #475569;
+            --text-muted: #94a3b8;
+            --border-color: #e2e8f0;
+            --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            --accent-primary: #6366f1;
+            --accent-secondary: #8b5cf6;
+            --accent-gradient: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+            --success-color: #10b981;
+            --warning-color: #f59e0b;
+            --danger-color: #ef4444;
+            --info-color: #3b82f6;
+        }
+
+        [data-theme="dark"] {
+            /* Dark Theme */
+            --bg-primary: #0f172a;
+            --bg-secondary: #1e293b;
+            --bg-tertiary: #334155;
+            --text-primary: #f1f5f9;
+            --text-secondary: #cbd5e1;
+            --text-muted: #64748b;
+            --border-color: #334155;
+            --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
+            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -1px rgba(0, 0, 0, 0.3);
+            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.4), 0 4px 6px -2px rgba(0, 0, 0, 0.3);
+        }
+
+        * {
+            transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+        }
+
+        body {
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            min-height: 100vh;
+        }
+
+        /* Navbar */
+        .navbar {
+            background: var(--accent-gradient);
+            backdrop-filter: blur(10px);
+            box-shadow: var(--shadow-md);
+            padding: 0.75rem 0;
+        }
+
+        .navbar-brand {
+            font-weight: 700;
+            font-size: 1.25rem;
+            letter-spacing: -0.025em;
+        }
+
+        .navbar .version-badge {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+
+        /* Theme Toggle Button */
+        .theme-toggle {
+            background: rgba(255, 255, 255, 0.15);
+            border: none;
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            transition: all 0.2s ease;
+        }
+
+        .theme-toggle:hover {
+            background: rgba(255, 255, 255, 0.25);
+            transform: scale(1.05);
+        }
+
+        .theme-toggle svg {
+            width: 20px;
+            height: 20px;
+        }
+
+        /* Cards */
+        .card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            box-shadow: var(--shadow-sm);
+            margin-bottom: 1.5rem;
+            overflow: hidden;
+        }
+
+        .card:hover {
+            box-shadow: var(--shadow-md);
+        }
+
+        .card-header {
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border-color);
+            padding: 1.25rem 1.5rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .card-body {
+            padding: 1.5rem;
+        }
+
+        /* Stat Cards */
+        .stat-card {
+            background: var(--accent-gradient);
+            color: white;
+            border: none;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .stat-card .card-text {
+            font-size: 2rem;
+            font-weight: 700;
+        }
+
+        .stat-card .card-title {
+            opacity: 0.9;
+            font-weight: 500;
+            font-size: 0.875rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        /* Buttons */
+        .btn {
+            border-radius: 10px;
+            padding: 0.625rem 1.25rem;
+            font-weight: 500;
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .btn:hover {
+            transform: translateY(-1px);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .btn-primary {
+            background: var(--accent-gradient);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            box-shadow: var(--shadow-md);
+            opacity: 0.95;
+        }
+
+        .btn-success {
+            background: var(--success-color);
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #059669;
+        }
+
+        .btn-info {
+            background: var(--info-color);
+            color: white;
+        }
+
+        .btn-info:hover {
+            background: #2563eb;
+        }
+
+        .btn-warning {
+            background: var(--warning-color);
+            color: white;
+        }
+
+        .btn-warning:hover {
+            background: #d97706;
+        }
+
+        .btn-danger {
+            background: var(--danger-color);
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #dc2626;
+        }
+
+        .btn-secondary {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+        }
+
+        .btn-secondary:hover {
+            background: var(--border-color);
+        }
+
+        .btn-sm {
+            padding: 0.375rem 0.75rem;
+            font-size: 0.8125rem;
+        }
+
+        /* Table */
+        .table {
+            color: var(--text-primary);
+            background: transparent;
+        }
+
+        .table tbody tr {
+            background-color: transparent;
+        }
+
+        .table tbody td {
+            background-color: transparent;
+            color: var(--text-secondary);
+        }
+
+        .table thead th {
+            background: var(--bg-tertiary);
+            color: var(--text-secondary);
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 0.75rem;
+            letter-spacing: 0.05em;
+            border-bottom: 1px solid var(--border-color);
+            padding: 0.875rem 1rem;
+        }
+
+        .table tbody tr {
+            border-bottom: 1px solid var(--border-color);
+            transition: background-color 0.15s ease;
+        }
+
+        .table tbody tr:nth-of-type(odd) {
+            background: transparent;
+        }
+
+        .table tbody tr:hover {
+            background: var(--bg-tertiary) !important;
+        }
+
+        .table td {
+            padding: 1rem;
+            vertical-align: middle;
+        }
+
+        /* Status Badges */
+        .badge {
+            padding: 0.375rem 0.75rem;
+            border-radius: 8px;
+            font-weight: 500;
+            font-size: 0.75rem;
+        }
+
+        .bg-success {
+            background: var(--success-color) !important;
+        }
+
+        .bg-secondary {
+            background: var(--text-muted) !important;
+        }
+
+        /* Status Colors */
+        .status-success { color: var(--success-color); font-weight: 500; }
+        .status-failed { color: var(--danger-color); font-weight: 500; }
+        .status-duplicate { color: var(--warning-color); font-weight: 500; }
+
+        /* Loading */
+        .loading {
+            display: none;
+        }
+
+        .spinner-border-sm {
+            width: 1rem;
+            height: 1rem;
+        }
+
+        /* Modal */
+        .modal-content {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+        }
+
+        .modal-header {
+            border-bottom: 1px solid var(--border-color);
+            padding: 1.25rem 1.5rem;
+        }
+
+        .modal-title {
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .modal-body {
+            color: var(--text-primary);
+            padding: 1.5rem;
+        }
+
+        .modal-footer {
+            border-top: 1px solid var(--border-color);
+            padding: 1rem 1.5rem;
+        }
+
+        .btn-close {
+            filter: invert(0.5);
+        }
+
+        [data-theme="dark"] .btn-close {
+            filter: invert(1);
+        }
+
+        /* Form Controls */
+        .form-control, .form-select {
+            background: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            border-radius: 10px;
+            padding: 0.625rem 0.875rem;
+        }
+
+        .form-control:focus, .form-select:focus {
+            background: var(--bg-primary);
+            border-color: var(--accent-primary);
+            color: var(--text-primary);
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+        }
+
+        .form-control::placeholder {
+            color: var(--text-muted);
+        }
+
+        .form-label {
+            color: var(--text-secondary);
+            font-weight: 500;
+            margin-bottom: 0.5rem;
+        }
+
+        .form-text {
+            color: var(--text-muted);
+        }
+
+        /* Quick Actions Section */
+        .quick-actions {
+            display: flex;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+        }
+
+        /* Action Buttons Group */
+        .action-buttons {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .stat-card .card-text {
+                font-size: 1.5rem;
+            }
+
+            .action-buttons {
+                flex-direction: column;
+            }
+
+            .action-buttons .btn {
+                width: 100%;
+            }
+        }
+
+        /* Container */
+        .main-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem 1rem;
+        }
+
+        /* Sign Result Modal */
+        #signResultContent {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        #signResultContent h6 {
+            color: var(--accent-primary);
+            font-weight: 600;
+            margin-top: 1rem;
+        }
+
+        #signResultContent ul {
+            padding-left: 1.5rem;
+        }
+
+        #signResultContent li {
+            margin-bottom: 0.5rem;
+            color: var(--text-secondary);
+        }
+    </style>
+</head>
+<body>
+    <!-- 导航栏 -->
+    <nav class="navbar navbar-expand-lg">
+        <div class="container">
+            <a class="navbar-brand text-white" href="#">
+                森空岛自动签到系统
+            </a>
+            <span class="navbar-text text-white version-badge me-3">
+                v1.0.0
+            </span>
+            <button class="theme-toggle" id="themeToggle" title="切换主题">
+                <!-- Sun Icon (shown in dark mode) -->
+                <svg class="sun-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="display: none;">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+                </svg>
+                <!-- Moon Icon (shown in light mode) -->
+                <svg class="moon-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+                </svg>
+            </button>
+        </div>
+    </nav>
+
+    <div class="main-container">
+        <!-- 概览统计 -->
+        <div class="row" id="overview">
+            <div class="col-md-3 col-sm-6 mb-3">
+                <div class="card stat-card">
+                    <div class="card-body text-center">
+                        <h5 class="card-title">总用户数</h5>
+                        <p class="card-text" id="totalUsers">-</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 col-sm-6 mb-3">
+                <div class="card stat-card">
+                    <div class="card-body text-center">
+                        <h5 class="card-title">启用用户</h5>
+                        <p class="card-text" id="enabledUsers">-</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 col-sm-6 mb-3">
+                <div class="card stat-card">
+                    <div class="card-body text-center">
+                        <h5 class="card-title">游戏角色</h5>
+                        <p class="card-text" id="totalCharacters">-</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 col-sm-6 mb-3">
+                <div class="card stat-card">
+                    <div class="card-body text-center">
+                        <h5 class="card-title">今日签到</h5>
+                        <p class="card-text" id="todaySign">-</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 快捷操作 -->
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        快捷操作
+                    </div>
+                    <div class="card-body">
+                        <div class="quick-actions">
+                            <button class="btn btn-primary" onclick="runSign('all')">
+                                立即签到全部
+                            </button>
+                            <button class="btn btn-success" onclick="runSign('arknights')">
+                                签到明日方舟
+                            </button>
+                            <button class="btn btn-info" onclick="runSign('endfield')">
+                                签到终末地
+                            </button>
+                            <span class="loading spinner-border spinner-border-sm ms-2" id="loadingSpinner"></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 账号管理 -->
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <span>账号管理</span>
+                        <button class="btn btn-sm btn-primary" onclick="showAddAccountModal()">
+                            添加账号
+                        </button>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>名称</th>
+                                        <th>状态</th>
+                                        <th>角色数</th>
+                                        <th>备注</th>
+                                        <th>操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="accountsTable">
+                                    <tr>
+                                        <td colspan="6" class="text-center">加载中...</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 签到记录 -->
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        最近签到记录
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>时间</th>
+                                        <th>用户</th>
+                                        <th>角色</th>
+                                        <th>游戏</th>
+                                        <th>状态</th>
+                                        <th>奖励</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="recordsTable">
+                                    <tr>
+                                        <td colspan="6" class="text-center">加载中...</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 定时任务 -->
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        定时任务
+                    </div>
+                    <div class="card-body">
+                        <table class="table">
+                            <tbody>
+                                <tr>
+                                    <td>明日方舟签到</td>
+                                    <td id="arknightsTime">-</td>
+                                    <td id="arknightsNext">-</td>
+                                </tr>
+                                <tr>
+                                    <td>终末地签到</td>
+                                    <td id="endfieldTime">-</td>
+                                    <td id="endfieldNext">-</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 添加账号模态框 -->
+    <div class="modal fade" id="addAccountModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">添加账号</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="addAccountForm">
+                        <div class="mb-3">
+                            <label class="form-label">账号名称 *</label>
+                            <input type="text" class="form-control" id="accountName" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Token（推荐）</label>
+                            <input type="text" class="form-control" id="accountToken" placeholder="留空则自动获取">
+                            <div class="form-text">森空岛 access_token，用于自动刷新 cred</div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Cred</label>
+                            <input type="text" class="form-control" id="accountCred">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Cred Token</label>
+                            <input type="text" class="form-control" id="accountCredToken">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">备注</label>
+                            <input type="text" class="form-control" id="accountRemark">
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="button" class="btn btn-primary" onclick="addAccount()">添加</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 签到结果模态框 -->
+    <div class="modal fade" id="signResultModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">签到结果</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" id="signResultContent">
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        const API_BASE = '/api';
+
+        // Theme Management
+        const themeToggle = document.getElementById('themeToggle');
+        const sunIcon = document.querySelector('.sun-icon');
+        const moonIcon = document.querySelector('.moon-icon');
+
+        // Get saved theme or default to light
+        const currentTheme = localStorage.getItem('theme') || 'light';
+        document.documentElement.setAttribute('data-theme', currentTheme);
+        updateThemeIcons(currentTheme);
+
+        themeToggle.addEventListener('click', () => {
+            const theme = document.documentElement.getAttribute('data-theme');
+            const newTheme = theme === 'light' ? 'dark' : 'light';
+
+            document.documentElement.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+            updateThemeIcons(newTheme);
+        });
+
+        function updateThemeIcons(theme) {
+            if (theme === 'dark') {
+                sunIcon.style.display = 'block';
+                moonIcon.style.display = 'none';
+            } else {
+                sunIcon.style.display = 'none';
+                moonIcon.style.display = 'block';
+            }
+        }
+
+        // 加载概览统计
+        async function loadOverview() {
+            try {
+                const response = await fetch(`${API_BASE}/stats/overview`);
+                const data = await response.json();
+
+                document.getElementById('totalUsers').textContent = data.total_users;
+                document.getElementById('enabledUsers').textContent = data.enabled_users;
+                document.getElementById('totalCharacters').textContent = data.total_characters;
+
+                const todaySign = data.today_sign;
+                document.getElementById('todaySign').textContent =
+                    `${todaySign.signed}/${todaySign.total} (${todaySign.unsigned} 未签到)`;
+            } catch (error) {
+                console.error('加载概览失败:', error);
+            }
+        }
+
+        // 加载账号列表
+        async function loadAccounts() {
+            try {
+                const response = await fetch(`${API_BASE}/accounts/`);
+                const accounts = await response.json();
+
+                const tbody = document.getElementById('accountsTable');
+                if (accounts.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="6" class="text-center">暂无账号</td></tr>';
+                    return;
+                }
+
+                tbody.innerHTML = accounts.map(account => `
+                    <tr>
+                        <td>${account.id}</td>
+                        <td>${account.name}</td>
+                        <td>
+                            <span class="badge ${account.enabled ? 'bg-success' : 'bg-secondary'}">
+                                ${account.enabled ? '启用' : '禁用'}
+                            </span>
+                        </td>
+                        <td>${account.character_count}</td>
+                        <td>${account.remark || '-'}</td>
+                        <td>
+                            <div class="action-buttons">
+                                <button class="btn btn-sm btn-primary" onclick="syncAccount(${account.id})">同步角色</button>
+                                <button class="btn btn-sm btn-warning" onclick="refreshCred(${account.id})">刷新Cred</button>
+                                <button class="btn btn-sm btn-danger" onclick="deleteAccount(${account.id})">删除</button>
+                            </div>
+                        </td>
+                    </tr>
+                `).join('');
+            } catch (error) {
+                console.error('加载账号失败:', error);
+                document.getElementById('accountsTable').innerHTML =
+                    '<tr><td colspan="6" class="text-center text-danger">加载失败: ' + error.message + '</td></tr>';
+            }
+        }
+
+        // 加载签到记录
+        async function loadRecords() {
+            try {
+                const response = await fetch(`${API_BASE}/records/?page_size=10`);
+                const data = await response.json();
+
+                const tbody = document.getElementById('recordsTable');
+                if (data.records.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="6" class="text-center">暂无记录</td></tr>';
+                    return;
+                }
+
+                const gameNames = { 'arknights': '明日方舟', 'endfield': '终末地' };
+                const statusClass = {
+                    'success': 'status-success',
+                    'failed': 'status-failed',
+                    'duplicate': 'status-duplicate'
+                };
+                const statusText = {
+                    'success': '成功',
+                    'failed': '失败',
+                    'duplicate': '已签到'
+                };
+
+                tbody.innerHTML = data.records.map(record => {
+                    const time = new Date(record.sign_time).toLocaleString('zh-CN');
+                    const rewards = record.rewards ? JSON.parse(record.rewards) : [];
+                    const rewardText = rewards.length > 0
+                        ? rewards.map(r => `${r.name || r.id} x${r.count || 1}`).join(', ')
+                        : '-';
+
+                    return `
+                        <tr>
+                            <td>${time}</td>
+                            <td>${record.user_name || '-'}</td>
+                            <td>${record.character_nickname || '-'}</td>
+                            <td>${gameNames[record.game_type] || record.game_type}</td>
+                            <td class="${statusClass[record.status]}">${statusText[record.status]}</td>
+                            <td>${rewardText}</td>
+                        </tr>
+                    `;
+                }).join('');
+            } catch (error) {
+                console.error('加载记录失败:', error);
+            }
+        }
+
+        // 加载定时任务信息
+        async function loadSchedule() {
+            try {
+                const response = await fetch(`${API_BASE}/sign/schedule`);
+                const data = await response.json();
+
+                document.getElementById('arknightsTime').textContent = data.arknights.time;
+                document.getElementById('endfieldTime').textContent = data.endfield.time;
+
+                if (data.arknights.next_run) {
+                    const nextTime = new Date(data.arknights.next_run);
+                    document.getElementById('arknightsNext').textContent =
+                        `下次: ${nextTime.toLocaleString('zh-CN')}`;
+                }
+                if (data.endfield.next_run) {
+                    const nextTime = new Date(data.endfield.next_run);
+                    document.getElementById('endfieldNext').textContent =
+                        `下次: ${nextTime.toLocaleString('zh-CN')}`;
+                }
+            } catch (error) {
+                console.error('加载定时任务失败:', error);
+            }
+        }
+
+        // 执行签到
+        async function runSign(game) {
+            const spinner = document.getElementById('loadingSpinner');
+            spinner.style.display = 'inline-block';
+
+            try {
+                const url = `${API_BASE}/sign/run?game=${game}`;
+                const response = await fetch(url, {
+                    method: 'POST'
+                });
+                const data = await response.json();
+
+                showSignResult(data);
+            } catch (error) {
+                alert('签到失败: ' + error.message);
+            } finally {
+                spinner.style.display = 'none';
+            }
+        }
+
+        // 显示签到结果
+        function showSignResult(data) {
+            const content = document.getElementById('signResultContent');
+            const gameNames = { 'arknights': '明日方舟', 'endfield': '终末地', 'all': '全部' };
+
+            let html = `<p>游戏: ${gameNames[data.game]}</p>`;
+            html += '<hr>';
+
+            for (const [user, result] of Object.entries(data.results)) {
+                html += `<h6>${user}</h6>`;
+                html += `<p>${result.summary.replace(/[✅❌ℹ️📦⏰]/g, '').trim()}</p>`;
+                html += '<ul>';
+                for (const [char, detail] of Object.entries(result.details)) {
+                    const detailClean = detail.replace(/[✅❌ℹ️📦⏰]/g, '').trim();
+                    html += `<li>${char}: ${detailClean}</li>`;
+                }
+                html += '</ul>';
+                html += '<hr>';
+            }
+
+            content.innerHTML = html;
+            new bootstrap.Modal(document.getElementById('signResultModal')).show();
+
+            // 刷新数据
+            setTimeout(() => {
+                loadOverview();
+                loadRecords();
+            }, 1000);
+        }
+
+        // 显示添加账号模态框
+        function showAddAccountModal() {
+            new bootstrap.Modal(document.getElementById('addAccountModal')).show();
+        }
+
+        // 添加账号
+        async function addAccount() {
+            const name = document.getElementById('accountName').value;
+            const token = document.getElementById('accountToken').value;
+            const cred = document.getElementById('accountCred').value;
+            const credToken = document.getElementById('accountCredToken').value;
+            const remark = document.getElementById('accountRemark').value;
+
+            if (!name) {
+                alert('请输入账号名称');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/accounts/`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        name, token, cred, cred_token: credToken, remark
+                    })
+                });
+
+                if (response.ok) {
+                    bootstrap.Modal.getInstance(document.getElementById('addAccountModal')).hide();
+                    document.getElementById('addAccountForm').reset();
+                    loadAccounts();
+                    loadOverview();
+                    alert('账号添加成功');
+                } else {
+                    const error = await response.json();
+                    alert('添加失败: ' + error.detail);
+                }
+            } catch (error) {
+                alert('添加失败: ' + error.message);
+            }
+        }
+
+        // 同步账号角色
+        async function syncAccount(accountId) {
+            if (!confirm('确定要同步角色吗？')) return;
+
+            try {
+                const response = await fetch(`${API_BASE}/accounts/${accountId}/sync`, {
+                    method: 'POST'
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    alert(data.message + `\n共 ${data.count} 个角色`);
+                    loadAccounts();
+                } else {
+                    const error = await response.json();
+                    alert('同步失败: ' + error.detail);
+                }
+            } catch (error) {
+                alert('同步失败: ' + error.message);
+            }
+        }
+
+        // 刷新 cred
+        async function refreshCred(accountId) {
+            try {
+                const response = await fetch(`${API_BASE}/accounts/${accountId}/refresh`, {
+                    method: 'POST'
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    alert(data.message);
+                } else {
+                    const error = await response.json();
+                    alert('刷新失败: ' + error.detail);
+                }
+            } catch (error) {
+                alert('刷新失败: ' + error.message);
+            }
+        }
+
+        // 删除账号
+        async function deleteAccount(accountId) {
+            if (!confirm('确定要删除此账号吗？')) return;
+
+            try {
+                const response = await fetch(`${API_BASE}/accounts/${accountId}`, {
+                    method: 'DELETE'
+                });
+
+                if (response.ok) {
+                    loadAccounts();
+                    loadOverview();
+                    alert('账号已删除');
+                } else {
+                    alert('删除失败');
+                }
+            } catch (error) {
+                alert('删除失败: ' + error.message);
+            }
+        }
+
+        // 页面加载时初始化
+        document.addEventListener('DOMContentLoaded', () => {
+            loadOverview();
+            loadAccounts();
+            loadRecords();
+            loadSchedule();
+
+            // 每30秒刷新一次数据
+            setInterval(() => {
+                loadOverview();
+                loadRecords();
+            }, 30000);
+        });
+    </script>
+</body>
+</html>

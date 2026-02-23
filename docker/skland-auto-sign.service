@@ -1,0 +1,19 @@
+[Unit]
+Description=Skland Auto Sign Service
+Documentation=https://github.com/FrostN0v0/nonebot-plugin-skland
+After=network.target
+
+[Service]
+Type=simple
+User=your_user
+Group=your_group
+WorkingDirectory=/path/to/skland-auto-sign
+Environment="PATH=/path/to/skland-auto-sign/venv/bin"
+Environment="PYTHONUNBUFFERED=1"
+Environment="TZ=Asia/Shanghai"
+ExecStart=/path/to/skland-auto-sign/venv/bin/python scripts/run.py
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
