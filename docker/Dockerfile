@@ -13,8 +13,11 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # 复制项目文件
 COPY src/ ./src/
-COPY config/ ./config/
 COPY scripts/ ./scripts/
+COPY docker/entrypoint.sh ./entrypoint.sh
+
+# 给 entrypoint.sh 执行权限
+RUN chmod +x entrypoint.sh
 
 # 创建数据目录
 RUN mkdir -p data/logs
@@ -27,4 +30,4 @@ ENV TZ=Asia/Shanghai
 EXPOSE 8080
 
 # 使用启动脚本
-CMD ["bash", "docker/entrypoint.sh"]
+CMD ["/app/entrypoint.sh"]

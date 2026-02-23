@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   skland-auto-sign:
     build:
@@ -8,21 +6,22 @@ services:
     container_name: skland-auto-sign
     restart: unless-stopped
 
-    # 挂载配置文件和数据目录
+    # 挂载数据目录
     volumes:
-      # 配置文件（读写，因为程序可能会更新 cred）
-      - ../config:/app/config
       # 数据目录（数据库和日志）
-      - ../data:/app/data
+      - ./data:/app/data
 
-    # 环境变量
-    environment:
-      - TZ=Asia/Shanghai
-      - PYTHONUNBUFFERED=1
+    # 环境变量（从 .env 文件加载）
+    env_file:
+      - ../.env
 
     # 端口映射
     ports:
       - "15151:8080"
+
+    # 网络配置
+    networks:
+      - skland-network
 
     # 日志配置
     logging:
@@ -38,3 +37,9 @@ services:
       timeout: 10s
       retries: 3
       start_period: 10s
+
+# 网络配置
+networks:
+  skland-network:
+    driver: bridge
+    name: skland-network

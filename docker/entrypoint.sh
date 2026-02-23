@@ -11,6 +11,14 @@ echo ""
 # 设置环境变量
 export PYTHONPATH=/app/src
 
+# 检查 .env 文件是否存在
+if [ -f "/app/.env" ]; then
+    echo "加载环境变量配置..."
+    export $(cat /app/.env | grep -v '^#' | xargs)
+else
+    echo "警告: .env 文件不存在，请确保已配置账号信息"
+fi
+
 # 检查数据库是否存在
 if [ ! -f "/app/data/skland.db" ]; then
     echo "数据库不存在，正在初始化..."
