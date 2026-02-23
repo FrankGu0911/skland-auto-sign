@@ -86,7 +86,7 @@ async def list_accounts():
 async def create_account(account: AccountCreate):
     """创建账号"""
     async with db.get_session() as session:
-        from sqlalchemy import select
+        from sqlalchemy import select, func
 
         # 检查名称是否已存在
         stmt = select(User).where(User.name == account.name)
@@ -125,6 +125,24 @@ async def create_account(account: AccountCreate):
         await session.commit()
         await session.refresh(user)
 
+        # 自动同步角色
+        character_count = 0
+        if cred:
+            try:
+                from core.sign_service import bind_characters
+
+                characters = await bind_characters(user, session)
+                character_count = len(characters)
+                logger.info(f"账号 {account.name} 自动同步角色成功，共 {character_count} 个角色")
+            except Exception as e:
+                logger.warning(f"账号 {account.name} 自动同步角色失败: {e}")
+                # 不影响账号创建，继续返回
+
+        # 获取角色数量
+        char_stmt = select(func.count(Character.id)).where(Character.user_id == user.id)
+        char_result = await session.execute(char_stmt)
+        character_count = char_result.scalar() or 0
+
         return AccountResponse(
             id=user.id,
             name=user.name,
@@ -134,7 +152,7 @@ async def create_account(account: AccountCreate):
             cred_token=user.cred_token[:20] + "..." if user.cred_token and len(user.cred_token) > 20 else user.cred_token,
             user_id=user.user_id or "",
             remark=user.remark or "",
-            character_count=0,
+            character_count=character_count,
         )
 
 
