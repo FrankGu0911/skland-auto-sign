@@ -1,0 +1,38 @@
+# 森空岛自动签到配置文件
+
+app:
+  name: "Skland Auto Sign"
+  version: "1.0.0"
+  debug: false
+
+database:
+  # 数据库类型: sqlite 或 postgresql
+  type: "sqlite"
+  # SQLite 数据库文件路径
+  url: "sqlite:///data/skland.db"
+
+scheduler:
+  # 明日方舟签到时间 (24 小时制)
+  arknights_sign_time: "00:15"
+  # 终末地签到时间 (24 小时制)
+  endfield_sign_time: "00:20"
+  # 时区
+  timezone: "Asia/Shanghai"
+  # 随机延迟（秒），避免同时请求
+  random_delay: 300
+
+logging:
+  # 日志级别: DEBUG, INFO, WARNING, ERROR, CRITICAL
+  level: "INFO"
+  # 日志目录
+  dir: "data/logs"
+  # 日志保留时间
+  retention: "30 days"
+  # 日志轮转时间
+  rotation: "1 day"
+
+web:
+  # Web 管理页面
+  enabled: true
+  host: "0.0.0.0"
+  port: 8080
