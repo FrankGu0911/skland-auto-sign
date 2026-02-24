@@ -138,108 +138,230 @@ def _get_app_name(app_code: str) -> str:
 
 
 async def do_arknights_sign(user: User, character: Character, session: AsyncSession) -> SignResult:
-    """执行明日方舟签到"""
+    """执行明日方舟签到（带自动重试）"""
     result = SignResult()
+    retried = False  # 是否已重试过
 
-    try:
-        cred = CRED(cred=user.cred, token=user.cred_token)
-        sign_response = await SklandAPI.ark_sign(cred, character.uid, character.channel_master_id)
+    while True:
+        try:
+            cred = CRED(cred=user.cred, token=user.cred_token)
+            sign_response = await SklandAPI.ark_sign(cred, character.uid, character.channel_master_id)
 
-        # 保存签到记录
-        awards_text = "\n".join(
-            f"  {award.resource.name} x {award.count}"
-            for award in sign_response.awards
-        )
-        record = SignRecord(
-            user_id=user.id,
-            character_id=character.id,
-            game_type="arknights",
-            status="success",
-            rewards=json.dumps([{"name": a.resource.name, "count": a.count} for a in sign_response.awards]),
-        )
-        session.add(record)
-
-        result.add_success(
-            character.nickname,
-            f"✅ 签到成功，获得了:\n📦{awards_text}"
-        )
-        logger.info(f"用户 {user.name} 角色 {character.nickname} 明日方舟签到成功")
-
-    except LoginException as e:
-        result.add_failed(character.nickname, str(e))
-        logger.error(f"用户 {user.name} 角色 {character.nickname} 明日方舟签到失败 (LoginException): {e}")
-
-    except UnauthorizedException as e:
-        result.add_failed(character.nickname, str(e))
-        logger.error(f"用户 {user.name} 角色 {character.nickname} 明日方舟签到失败 (UnauthorizedException): {e}")
-
-    except RequestException as e:
-        error_msg = str(e)
-        if "请勿重复签到" in error_msg:
-            result.add_duplicate(character.nickname)
+            # 保存签到记录
+            awards_text = "\n".join(
+                f"  {award.resource.name} x {award.count}"
+                for award in sign_response.awards
+            )
             record = SignRecord(
                 user_id=user.id,
                 character_id=character.id,
                 game_type="arknights",
-                status="duplicate",
+                status="success",
+                rewards=json.dumps([{"name": a.resource.name, "count": a.count} for a in sign_response.awards]),
             )
             session.add(record)
-            logger.info(f"用户 {user.name} 角色 {character.nickname} 明日方舟已签到")
-        else:
-            result.add_failed(character.nickname, error_msg)
-            logger.error(f"用户 {user.name} 角色 {character.nickname} 明日方舟签到失败: {e}")
+
+            result.add_success(
+                character.nickname,
+                f"✅ 签到成功，获得了:\n📦{awards_text}"
+            )
+            logger.info(f"用户 {user.name} 角色 {character.nickname} 明日方舟签到成功")
+            break
+
+        except LoginException as e:
+            # cred 失效，尝试刷新
+            if user.token and not retried:
+                logger.warning(f"用户 {user.name} 角色 {character.nickname} 明日方舟签到 cred 失效，尝试自动刷新...")
+                try:
+                    from core import SklandLoginAPI
+                    grant_code = await SklandLoginAPI.get_grant_code(user.token, 0)
+                    new_cred = await SklandLoginAPI.get_cred(grant_code)
+                    user.cred = new_cred.cred
+                    user.cred_token = new_cred.token
+                    if new_cred.userId:
+                        user.user_id = new_cred.userId
+                    logger.info(f"用户 {user.name} cred 刷新成功，重试签到...")
+                    retried = True
+                    await session.commit()  # 保存新的 cred
+                    continue
+                except Exception as refresh_error:
+                    logger.error(f"用户 {user.name} 刷新 cred 失败: {refresh_error}")
+                    result.add_failed(character.nickname, f"cred 失效且刷新失败: {e}")
+                    break
+            else:
+                result.add_failed(character.nickname, f"cred 失效（未配置 token 无法自动刷新）: {e}")
+                logger.error(f"用户 {user.name} 角色 {character.nickname} 明日方舟签到失败 (LoginException): {e}")
+                break
+
+        except UnauthorizedException as e:
+            # cred_token 失效，尝试刷新
+            if not retried:
+                logger.warning(f"用户 {user.name} 角色 {character.nickname} 明日方舟签到 cred_token 失效，尝试自动刷新...")
+                try:
+                    from core import SklandLoginAPI
+                    new_token = await SklandLoginAPI.refresh_token(user.cred)
+                    user.cred_token = new_token
+                    logger.info(f"用户 {user.name} cred_token 刷新成功，重试签到...")
+                    retried = True
+                    await session.commit()  # 保存新的 cred_token
+                    continue
+                except Exception as refresh_error:
+                    logger.error(f"用户 {user.name} 刷新 cred_token 失败: {refresh_error}")
+                    result.add_failed(character.nickname, f"cred_token 失效且刷新失败: {e}")
+                    break
+            else:
+                result.add_failed(character.nickname, f"cred_token 失效: {e}")
+                logger.error(f"用户 {user.name} 角色 {character.nickname} 明日方舟签到失败 (UnauthorizedException): {e}")
+                break
+
+        except RequestException as e:
+            error_msg = str(e)
+            if "请勿重复签到" in error_msg:
+                result.add_duplicate(character.nickname)
+                record = SignRecord(
+                    user_id=user.id,
+                    character_id=character.id,
+                    game_type="arknights",
+                    status="duplicate",
+                )
+                session.add(record)
+                logger.info(f"用户 {user.name} 角色 {character.nickname} 明日方舟已签到")
+            # 对可能由认证问题导致的未知错误，尝试刷新 cred
+            elif user.token and not retried and any(keyword in error_msg.lower() for keyword in ["认证", "授权", "登录", "token", "cred", "凭证", "未登录"]):
+                logger.warning(f"用户 {user.name} 角色 {character.nickname} 明日方舟签到可能因认证问题失败，尝试自动刷新...")
+                try:
+                    from core import SklandLoginAPI
+                    grant_code = await SklandLoginAPI.get_grant_code(user.token, 0)
+                    new_cred = await SklandLoginAPI.get_cred(grant_code)
+                    user.cred = new_cred.cred
+                    user.cred_token = new_cred.token
+                    if new_cred.userId:
+                        user.user_id = new_cred.userId
+                    logger.info(f"用户 {user.name} cred 刷新成功，重试签到...")
+                    retried = True
+                    await session.commit()  # 保存新的 cred
+                    continue
+                except Exception as refresh_error:
+                    logger.error(f"用户 {user.name} 刷新 cred 失败: {refresh_error}")
+                    result.add_failed(character.nickname, error_msg)
+                    break
+            else:
+                result.add_failed(character.nickname, error_msg)
+                logger.error(f"用户 {user.name} 角色 {character.nickname} 明日方舟签到失败: {e}")
+            break
 
     return result
 
 
 async def do_endfield_sign(user: User, character: Character, session: AsyncSession) -> SignResult:
-    """执行终末地签到"""
+    """执行终末地签到（带自动重试）"""
     result = SignResult()
+    retried = False  # 是否已重试过
 
-    try:
-        cred = CRED(cred=user.cred, token=user.cred_token)
-        sign_response = await SklandAPI.endfield_sign(cred, character.uid, character.channel_master_id)
+    while True:
+        try:
+            cred = CRED(cred=user.cred, token=user.cred_token)
+            sign_response = await SklandAPI.endfield_sign(cred, character.uid, character.channel_master_id)
 
-        # 保存签到记录
-        awards_text = sign_response.award_summary
-        record = SignRecord(
-            user_id=user.id,
-            character_id=character.id,
-            game_type="endfield",
-            status="success",
-            rewards=json.dumps([{"id": a.id, "type": a.type} for a in sign_response.awardIds]),
-        )
-        session.add(record)
-
-        result.add_success(
-            character.nickname,
-            f"✅ 签到成功，获得了:\n📦{awards_text}"
-        )
-        logger.info(f"用户 {user.name} 角色 {character.nickname} 终末地签到成功")
-
-    except LoginException as e:
-        result.add_failed(character.nickname, str(e))
-        logger.error(f"用户 {user.name} 角色 {character.nickname} 终末地签到失败 (LoginException): {e}")
-
-    except UnauthorizedException as e:
-        result.add_failed(character.nickname, str(e))
-        logger.error(f"用户 {user.name} 角色 {character.nickname} 终末地签到失败 (UnauthorizedException): {e}")
-
-    except RequestException as e:
-        error_msg = str(e)
-        if "请勿重复签到" in error_msg:
-            result.add_duplicate(character.nickname)
+            # 保存签到记录
+            awards_text = sign_response.award_summary
             record = SignRecord(
                 user_id=user.id,
                 character_id=character.id,
                 game_type="endfield",
-                status="duplicate",
+                status="success",
+                rewards=json.dumps([{"id": a.id, "type": a.type} for a in sign_response.awardIds]),
             )
             session.add(record)
-            logger.info(f"用户 {user.name} 角色 {character.nickname} 终末地已签到")
-        else:
-            result.add_failed(character.nickname, error_msg)
-            logger.error(f"用户 {user.name} 角色 {character.nickname} 终末地签到失败: {e}")
+
+            result.add_success(
+                character.nickname,
+                f"✅ 签到成功，获得了:\n📦{awards_text}"
+            )
+            logger.info(f"用户 {user.name} 角色 {character.nickname} 终末地签到成功")
+            break
+
+        except LoginException as e:
+            # cred 失效，尝试刷新
+            if user.token and not retried:
+                logger.warning(f"用户 {user.name} 角色 {character.nickname} 终末地签到 cred 失效，尝试自动刷新...")
+                try:
+                    from core import SklandLoginAPI
+                    grant_code = await SklandLoginAPI.get_grant_code(user.token, 0)
+                    new_cred = await SklandLoginAPI.get_cred(grant_code)
+                    user.cred = new_cred.cred
+                    user.cred_token = new_cred.token
+                    if new_cred.userId:
+                        user.user_id = new_cred.userId
+                    logger.info(f"用户 {user.name} cred 刷新成功，重试签到...")
+                    retried = True
+                    await session.commit()  # 保存新的 cred
+                    continue
+                except Exception as refresh_error:
+                    logger.error(f"用户 {user.name} 刷新 cred 失败: {refresh_error}")
+                    result.add_failed(character.nickname, f"cred 失效且刷新失败: {e}")
+                    break
+            else:
+                result.add_failed(character.nickname, f"cred 失效（未配置 token 无法自动刷新）: {e}")
+                logger.error(f"用户 {user.name} 角色 {character.nickname} 终末地签到失败 (LoginException): {e}")
+                break
+
+        except UnauthorizedException as e:
+            # cred_token 失效，尝试刷新
+            if not retried:
+                logger.warning(f"用户 {user.name} 角色 {character.nickname} 终末地签到 cred_token 失效，尝试自动刷新...")
+                try:
+                    from core import SklandLoginAPI
+                    new_token = await SklandLoginAPI.refresh_token(user.cred)
+                    user.cred_token = new_token
+                    logger.info(f"用户 {user.name} cred_token 刷新成功，重试签到...")
+                    retried = True
+                    await session.commit()  # 保存新的 cred_token
+                    continue
+                except Exception as refresh_error:
+                    logger.error(f"用户 {user.name} 刷新 cred_token 失败: {refresh_error}")
+                    result.add_failed(character.nickname, f"cred_token 失效且刷新失败: {e}")
+                    break
+            else:
+                result.add_failed(character.nickname, f"cred_token 失效: {e}")
+                logger.error(f"用户 {user.name} 角色 {character.nickname} 终末地签到失败 (UnauthorizedException): {e}")
+                break
+
+        except RequestException as e:
+            error_msg = str(e)
+            if "请勿重复签到" in error_msg:
+                result.add_duplicate(character.nickname)
+                record = SignRecord(
+                    user_id=user.id,
+                    character_id=character.id,
+                    game_type="endfield",
+                    status="duplicate",
+                )
+                session.add(record)
+                logger.info(f"用户 {user.name} 角色 {character.nickname} 终末地已签到")
+            # 对可能由认证问题导致的未知错误，尝试刷新 cred
+            elif user.token and not retried and any(keyword in error_msg.lower() for keyword in ["认证", "授权", "登录", "token", "cred", "凭证", "未登录"]):
+                logger.warning(f"用户 {user.name} 角色 {character.nickname} 终末地签到可能因认证问题失败，尝试自动刷新...")
+                try:
+                    from core import SklandLoginAPI
+                    grant_code = await SklandLoginAPI.get_grant_code(user.token, 0)
+                    new_cred = await SklandLoginAPI.get_cred(grant_code)
+                    user.cred = new_cred.cred
+                    user.cred_token = new_cred.token
+                    if new_cred.userId:
+                        user.user_id = new_cred.userId
+                    logger.info(f"用户 {user.name} cred 刷新成功，重试签到...")
+                    retried = True
+                    await session.commit()  # 保存新的 cred
+                    continue
+                except Exception as refresh_error:
+                    logger.error(f"用户 {user.name} 刷新 cred 失败: {refresh_error}")
+                    result.add_failed(character.nickname, error_msg)
+                    break
+            else:
+                result.add_failed(character.nickname, error_msg)
+                logger.error(f"用户 {user.name} 角色 {character.nickname} 终末地签到失败: {e}")
+            break
 
     return result
 

@@ -70,8 +70,8 @@ class SklandAPI:
                         raise UnauthorizedException(f"获取账号 userId 失败：{response.json().get('message')}")
                     elif status == 10002:
                         raise LoginException(f"获取账号 userId 失败：{response.json().get('message')}")
-                    if status != 0:
-                        raise RequestException(f"获取账号 userId 失败：{response.json().get('message')}")
+                    else:
+                        raise RequestException(f"获取账号 userId 失败 (code={status})：{response.json().get('message')}")
                 return response.json()["data"]["teenager"]["userId"]
             except httpx.HTTPError as e:
                 raise RequestException(f"获取账号 userId 失败: {e}")
@@ -91,8 +91,8 @@ class SklandAPI:
                         raise UnauthorizedException(f"获取绑定角色失败：{response.json().get('message')}")
                     elif status == 10002:
                         raise LoginException(f"获取绑定角色失败：{response.json().get('message')}")
-                    if status != 0:
-                        raise RequestException(f"获取绑定角色失败：{response.json().get('message')}")
+                    else:
+                        raise RequestException(f"获取绑定角色失败 (code={status})：{response.json().get('message')}")
                 return response.json()["data"]["list"]
             except httpx.HTTPError as e:
                 raise RequestException(f"获取绑定角色失败: {e}")
@@ -122,8 +122,8 @@ class SklandAPI:
                         raise UnauthorizedException(f"角色 {uid} 签到失败：{response.json().get('message')}")
                     elif status == 10002:
                         raise LoginException(f"角色 {uid} 签到失败：{response.json().get('message')}")
-                    elif status != 0:
-                        raise RequestException(f"角色 {uid} 签到失败：{response.json().get('message')}")
+                    else:
+                        raise RequestException(f"角色 {uid} 签到失败 (code={status})：{response.json().get('message')}")
             except httpx.HTTPError as e:
                 raise RequestException(f"角色 {uid} 签到失败: {e}")
             return ArkSignResponse(**response.json()["data"])
@@ -155,8 +155,8 @@ class SklandAPI:
                         raise UnauthorizedException(f"角色 {uid} 终末地签到失败：{response.json().get('message')}")
                     elif status == 10002:
                         raise LoginException(f"角色 {uid} 终末地签到失败：{response.json().get('message')}")
-                    elif status != 0:
-                        raise RequestException(f"角色 {uid} 终末地签到失败：{response.json().get('message')}")
+                    else:
+                        raise RequestException(f"角色 {uid} 终末地签到失败 (code={status})：{response.json().get('message')}")
             except httpx.HTTPError as e:
                 raise RequestException(f"角色 {uid} 终末地签到失败: {e}")
             return EndfieldSignResponse(**response.json()["data"])
